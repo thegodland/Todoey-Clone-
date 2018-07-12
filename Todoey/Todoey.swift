@@ -10,7 +10,7 @@ import UIKit
 
 class Todoey: UITableViewController {
     
-    let itemArray = []
+    var itemArray = [""]
     
 
     override func viewDidLoad() {
@@ -41,7 +41,22 @@ class Todoey: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
     }
 
-
+    //MARK - ADD BAR BUTTON PRESSED FUNC
+    @IBAction func barBtnPressed(_ sender: UIBarButtonItem) {
+        let alert = UIAlertController(title: "Add a event to do", message: "", preferredStyle: .alert)
+        var textField = UITextField()
+        let action = UIAlertAction(title: "ADD", style: .default) { (action) in
+            self.itemArray.append(textField.text!)
+            self.tableView.reloadData()
+        }
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "please type your events"
+            textField = alertTextField
+        }
+        alert.addAction(action)
+        present(alert, animated: true, completion: nil)
+    }
+    
 
 }
 
