@@ -8,36 +8,47 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class Todoey: UITableViewController {
+class Todoey: SwipeTableViewController {
     
     let realm = try! Realm()
     
+    @IBOutlet weak var searchBar: UISearchBar!
     var todoItems : Results<Item>?
     
     var selectedCategory : Category? {
         didSet{
             loadItems()
+           
         }
     }
     
-//    let defaults = UserDefaults.standard
-//    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
-
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-        
-//        let item1 = Item()
-//        item1.title = "Listings"
-//        itemArray.append(item1)
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-        
-//        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-//            itemArray = items
-//        }
+
+//        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+         tableView.separatorStyle = .none
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        title = selectedCategory?.name
+        guard let colorHex = selectedCategory?.backgroundColor else {fatalError()}
+        updateNavBar(withHexCode : colorHex)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "FF6600")
+    }
+    
+    // MARK - update nav bar color
+    func updateNavBar(withHexCode colorHexCode : String){
+        guard let navBar = navigationController?.navigationBar else {fatalError()}
+        guard let navBarColor = UIColor(hexString: colorHexCode) else {fatalError()}
+        navBar.barTintColor = navBarColor
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor : ContrastColorOf(navBarColor, returnFlat: true)]
+        searchBar.barTintColor = navBarColor
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -45,21 +56,21 @@ class Todoey: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoeyCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+            
+            if let color = UIColor(hexString: selectedCategory?.backgroundColor ?? "FF6600")?.darken(byPercentage: CGFloat(indexPath.row)/CGFloat(todoItems!.count)){
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+            
         }else{
             cell.textLabel?.text = "No Items Added Yet"
         }
 
-//        if item.done == true {
-//            cell.accessoryType = .checkmark
-//        }else{
-//            cell.accessoryType = .none
-//        }
-        
         return cell
         
     }
@@ -117,6 +128,19 @@ class Todoey: UITableViewController {
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
 
         tableView.reloadData()
+    }
+    
+    // MARK - OVERRIDE UPDATEMODEL FUNC
+    override func updateModel(at indexPath: IndexPath) {
+        if let itemForDeletion = self.todoItems? [indexPath.row]{
+            do{
+                try self.realm.write {
+                    self.realm.delete(itemForDeletion)
+                }
+            }catch{
+                print("error is \(error)")
+            }
+        }
     }
 
 }
